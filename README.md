@@ -1,90 +1,235 @@
-# CART POLE BALANCING
+# Implementation of Q-Learning Control Algorithm using Gymnasium
 
-## AIM
-To develop and fine tune the Monte Carlo algorithm to stabilize the Cart Pole.
+## Aim
 
-## PROBLEM STATEMENT
-Implement a Monte Carlo Control algorithm to solve the cartpole  environment by learning the optimal Q values. The goal is to train and improve the action value function to maximize cartpole balancing steps. Perform training with pretrained Q values and compare it with the model trained with no pretrained Q values. 
+To implement the Q-Learning control algorithm using the Gymnasium FrozenLake-v1 environment and learn an optimal action-value function that enables the agent to select suitable actions for reaching the goal state while avoiding holes.
 
-## MONTE CARLO CONTROL ALGORITHM FOR CART POLE BALANCING
-Include the steps involved in the Monte Carlo control algorithm stabilization.
+## Problem Statement
 
-## MONTE CARLO CONTROL FUNCTION
+To implement the Q-Learning control algorithm using the Gymnasium FrozenLake-v1 environment. The agent must learn an optimal action-value function through interaction with the environment and select suitable actions to reach the goal while avoiding the holes.
+
+## Software Requirements
+
+* **Programming Language:** Python
+* **Library:** Gymnasium
+* **Numerical Computation:** NumPy
+* **Visualization:** Matplotlib
+* **Environment:** FrozenLake-v1
+* **Platform:** Jupyter Notebook / Google Colab
+
+## Environment Description
+
+The FrozenLake-v1 environment is a grid-world reinforcement learning environment provided by Gymnasium.
+
+The environment consists of a **4 × 4 grid** containing:
+
+* **S** – Starting state
+* **F** – Frozen/safe surface
+* **H** – Hole, which terminates the episode
+* **G** – Goal state
+
+The agent starts from the initial state and must navigate through the frozen surface to reach the goal without falling into a hole.
+
+The environment contains **16 states** and **4 possible actions**:
+
+| Action | Direction |
+| ------ | --------- |
+| 0      | Left      |
+| 1      | Down      |
+| 2      | Right     |
+| 3      | Up        |
+
+The agent receives a reward when it successfully reaches the goal. Falling into a hole terminates the episode.
+
+## Theory
+
+Q-Learning is an **off-policy reinforcement learning control algorithm** that learns the optimal action-value function directly.
+
+The action-value function \(Q(s,a)\) represents the expected return obtained when the agent takes action \(a\) in state \(s\) and subsequently follows the best possible policy.
+
+The Q-Learning update rule is:
+
+$$
+Q(S_t,A_t) \leftarrow Q(S_t,A_t) +
+\alpha
+\left[
+R_{t+1}+
+\gamma\max_a Q(S_{t+1},a)
+-Q(S_t,A_t)
+\right]
+$$
+
+Where:
+
+| Symbol                  | Meaning                                |
+| ----------------------- | -------------------------------------- |
+| \(S_t\)                 | Current state                          |
+| \(A_t\)                 | Current action                         |
+| \(R_{t+1}\)             | Reward received after taking action    |
+| \(S_{t+1}\)             | Next state                             |
+| \(\alpha\)              | Learning rate                          |
+| \(\gamma\)              | Discount factor                        |
+| \(Q(s,a)\)              | Action-value function                  |
+| \(\max_a Q(S_{t+1},a)\) | Maximum action value in the next state |
+
+The important feature of Q-Learning is that it uses the **maximum Q-value of the next state** when calculating the target:
+
+$$
+Target = R+\gamma\max_a Q(S',a)
+$$
+
+Therefore, Q-Learning learns the optimal policy independently of the action actually selected during exploration.
+
+## Epsilon-Greedy Action Selection
+
+During training, the agent uses an **epsilon-greedy strategy** to balance exploration and exploitation.
+
+With probability \(\epsilon\), the agent explores by selecting a random action.
+
+With probability \(1-\epsilon\), the agent exploits the learned Q-table by selecting the action with the highest Q-value.
+
+$$
+a =
+\begin{cases}
+\text{random action}, & \text{with probability } \epsilon\\
+\arg\max_a Q(s,a), & \text{with probability } 1-\epsilon
+\end{cases}
+$$
+
+Initially, epsilon is high, allowing the agent to explore different actions. As training progresses, epsilon is gradually reduced so that the agent increasingly exploits the learned Q-values.
+
+## Algorithm
+
+1. Initialize the FrozenLake-v1 environment.
+2. Determine the number of states and actions.
+3. Initialize the Q-table with zeros for all state-action pairs.
+4. Set the learning rate \(\alpha\), discount factor \(\gamma\), initial epsilon, minimum epsilon, and epsilon decay rate.
+5. Reset the environment at the beginning of each episode.
+6. Select an action using the epsilon-greedy strategy.
+7. Execute the selected action in the environment.
+8. Observe the next state, reward, and termination status.
+9. Calculate the Q-Learning target:
+
+$$
+Target = R+\gamma\max_a Q(S',a)
+$$
+
+10. Update the Q-value using:
+
+$$
+Q(S,A) \leftarrow Q(S,A)+
+\alpha[Target-Q(S,A)]
+$$
+
+11. Move to the next state.
+12. Continue until the episode terminates.
+13. Store the reward obtained in the episode.
+14. Reduce epsilon gradually to decrease exploration and increase exploitation.
+15. Repeat the process for the specified number of episodes.
+16. Obtain the state-value function using:
+
+$$
+V(S)=\max_a Q(S,a)
+$$
+
+17. Obtain the learned policy by selecting the action with the maximum Q-value for each state.
+18. Plot the learning curve.
+19. Calculate the average reward over the last 1000 episodes.
+
+## Python Program
+
+```python
+# -------------------------------------------------
+# Q-Learning Training
+# -------------------------------------------------
+epsilon = epsilon_start
+
+for episode in range(num_episodes):
+
+    state, info = env.reset()
+    total_reward = 0
+
+    for step in range(max_steps_per_episode):
+
+        action = choose_action(state, epsilon)
+
+        next_state, reward, terminated, truncated, info = env.step(action)
+
+        if terminated or truncated:
+            target = reward
+        else:
+            target = reward + gamma * np.max(Q[next_state])
+        Q[state, action] = Q[state, action] + alpha * (
+            target - Q[state, action]
+        )
+        state = next_state
+
+        total_reward += reward
+        if terminated or truncated:
+            break
+            
+    episode_rewards.append(total_reward)
+    epsilon = max(epsilon_min, epsilon * epsilon_decay)
+
+# -------------------------------------------------
+# Extract State-Value Function and Policy
+# -------------------------------------------------
+
+state_values = np.max(Q, axis=1)
+
+learned_policy = np.argmax(Q, axis=1)
 ```
-def mc_control (env,n_bins=g_bins, gamma = 1.0,
-                init_alpha = 0.5,min_alpha = 0.01, alpha_decay_ratio = 0.5,
-                init_epsilon = 1.0, min_epsilon = 0.1, epsilon_decay_ratio = 0.9,
-                n_episodes = 3000, max_steps = 200, first_visit = True, init_Q=None):
 
-    nA = env.action_space.n
-    discounts = np.logspace(0, max_steps,
-                            num = max_steps, base = gamma,
-                            endpoint = False)
-    alphas = decay_schedule(init_alpha, min_alpha,
-                            0.9999, n_episodes)
-    epsilons = decay_schedule(init_epsilon, min_epsilon,
-                            0.99, n_episodes)
-    pi_track = []
-    global Q_track
-    global Q
+## Output
+<img width="1000" height="692" alt="image" src="https://github.com/user-attachments/assets/0b3ff7ea-f7a8-4ace-bcc1-45f3307b63b6" />
 
+<img width="1230" height="601" alt="image" src="https://github.com/user-attachments/assets/61aa887c-28b7-4fbb-a1bc-3dfa38c62824" />
 
-    if init_Q is None:
-        Q = np.zeros([n_bins]*env.observation_space.shape[0] + [env.action_space.n],dtype =np.float64)
-    else:
-        Q = init_Q
+### Estimated State-Value Function
 
-    n_elements = Q.size
-    n_nonzero_elements = 0
+The state-value function is obtained using:
 
-    Q_track = np.zeros([n_episodes] + [n_bins]*env.observation_space.shape[0] + [env.action_space.n],dtype =np.float64)
-    select_action = lambda state, Q, epsilon: np.argmax(Q[tuple(state)]) if np.random.random() > epsilon else np.random.randint(len(Q[tuple(state)]))
+$$
+V(S)=\max_a Q(S,a)
+$$
 
-    progress_bar = tqdm(range(n_episodes), leave=False)
-    steps_balanced_total = 1
-    mean_steps_balanced = 0
-    for e in progress_bar:
-        trajectory = generate_trajectory(select_action, Q, epsilons[e],
-                                    env, max_steps)
+It represents the highest estimated value for each state.
 
-        steps_balanced_total = steps_balanced_total + len(trajectory)
-        mean_steps_balanced = 0
+### Learned Policy
 
-        visited = np.zeros([n_bins]*env.observation_space.shape[0] + [env.action_space.n],dtype =np.float64)
-        for t, (state, action, reward, _, _) in enumerate(trajectory):
-            #if visited[tuple(state)][action] and first_visit:
-            #    continue
-            visited[tuple(state)][action] = True
-            n_steps = len(trajectory[t:])
-            G = np.sum(discounts[:n_steps]*trajectory[t:, 2])
-            Q[tuple(state)][action] = Q[tuple(state)][action]+alphas[e]*(G - Q[tuple(state)][action])
-        Q_track[e] = Q
-        n_nonzero_elements = np.count_nonzero(Q)
-        pi_track.append(np.argmax(Q, axis=env.observation_space.shape[0]))
-        if e != 0:
-            mean_steps_balanced = steps_balanced_total/e
-        #progress_bar.set_postfix(episode=e, Epsilon=epsilons[e], Steps=f"{len(trajectory)}" ,MeanStepsBalanced=f"{mean_steps_balanced:.2f}", NonZeroValues="{0}/{1}".format(n_nonzero_elements,n_elements))
-        progress_bar.set_postfix(episode=e, Epsilon=epsilons[e], StepsBalanced=f"{len(trajectory)}" ,MeanStepsBalanced=f"{mean_steps_balanced:.2f}")
+The learned policy selects the action having the maximum Q-value for each state.
 
-    print("mean_steps_balanced={0},steps_balanced_total={1}".format(mean_steps_balanced,steps_balanced_total))
-    V = np.max(Q, axis=env.observation_space.shape[0])
-    pi = lambda s:{s:a for s, a in enumerate(np.argmax(Q, axis=env.observation_space.shape[0]))}[s]
+The actions are represented as:
 
-    return Q, V, pi
-```
+* **L** – Left
+* **D** – Down
+* **R** – Right
+* **U** – Up
 
-## OUTPUT:
-1. Monte Carlo Control trained without pretrained Q values.
+### Average Reward
 
-<img width="505" height="32" alt="image" src="https://github.com/user-attachments/assets/af2b9884-bf9e-441c-8e52-95ef4ed19a89" />
+The average reward is calculated over the **last 1000 episodes** to evaluate the final performance of the learned agent.
 
-2. Monte Carlo Control trained with pretrained Q values.
-   
-<img width="492" height="33" alt="image" src="https://github.com/user-attachments/assets/8fd3c51a-1b58-43a2-99c6-62a62ed41536" />
+### Learning Curve
 
-3. Monte Carlo Control trained with pretrained Q values and modified parameters.
-   
-<img width="502" height="32" alt="image" src="https://github.com/user-attachments/assets/b18df253-48b8-460e-8e52-ba1ff31442ae" />
+The learning curve shows how the average reward changes during training.
 
-## RESULT:
-Therefore, Monte Carlo algorithm to stabilize the Cart Pole is developed and executed successfully.
+## Result
+
+The Q-Learning control algorithm was successfully implemented using the Gymnasium FrozenLake-v1 environment.
+
+The agent learned an action-value function through repeated interaction with the environment. The resulting Q-table contains the learned values for each state-action pair.
+
+The state-value function was obtained by selecting the maximum Q-value for each state, and the learned policy selects the action with the highest Q-value.
+
+The learning curve represents the agent's performance during training, while the average reward over the last 1000 episodes indicates the final performance of the learned policy.
+
+## Inference
+
+The experiment demonstrates that Q-Learning can learn a suitable action-selection policy through trial and error without requiring a predefined model of the environment.
+
+Initially, the agent explores different actions using a high epsilon value. As training progresses, epsilon decreases, allowing the agent to increasingly exploit the learned Q-values.
+
+The Q-table gradually learns the usefulness of different actions in each state. The learned state-value function represents the estimated value of each state, while the learned policy chooses the action with the highest estimated Q-value.
+
+Therefore, the experiment demonstrates that **Q-Learning is effective for learning an action-selection policy in the FrozenLake environment by balancing exploration and exploitation.**
